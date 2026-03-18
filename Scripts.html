@@ -1,0 +1,575 @@
+<script>
+
+/*************************************************
+ VARIABLES GLOBALES
+*************************************************/
+let accionPendiente = null;
+let usuarioActual = null;
+let tiempoInactividad;
+const LIMITE_INACTIVIDAD = 30 * 60 * 1000;
+
+function inicializarSesion(){
+
+  console.log("Inicializando sesión...");
+
+  google.script.run
+    .withSuccessHandler(function(usuario){
+
+      usuarioActual = usuario;
+
+      console.log("Usuario:", usuario.email);
+      console.log("Rol:", usuario.rol);
+
+      iniciarControlInactividad();
+
+    })
+    .withFailureHandler(function(error){
+
+      console.error("Error obteniendo sesión:", error);
+      mostrarError("No se pudo inicializar la sesión.");
+
+    })
+    .obtenerUsuarioActual();
+
+}
+
+/*************************************************
+ UTILIDAD MENSAJES
+*************************************************/
+
+function mostrarExito(mensaje){
+
+  const el = document.getElementById("mensajeExito");
+  const modal = document.getElementById("modalExito");
+
+  if (!el || !modal) {
+    console.warn("Modal de éxito no disponible en esta vista.");
+    return;
+  }
+
+  el.innerText = mensaje;
+  modal.style.display = "flex";
+}
+
+function cerrarModalError(){
+  const modal = document.getElementById("modalError");
+  if (modal) modal.style.display = "none";
+}
+
+function mostrarError(mensaje){
+
+  const el = document.getElementById("mensajeError");
+  const modal = document.getElementById("modalError");
+
+  if (!el || !modal) {
+    console.error("Modal de error no disponible:", mensaje);
+    return;
+  }
+
+  el.innerText = mensaje;
+  modal.style.display = "flex";
+}
+
+/*************************************************
+ CARGA DINÁMICA DE VISTAS
+*************************************************/
+
+function cargarVista(vista){
+
+  google.script.run
+    .withSuccessHandler(function(html){
+
+      const contenedor = document.getElementById("contenido-dinamico");
+      contenedor.innerHTML = html;
+
+      if (vista === "Dashboard"){
+        cargarDashboard();
+      }
+
+      if (vista === "Registro"){
+  cargarFechaHoraRegistro();
+  cargarListaMiembros();
+      }
+
+      if (vista === "Historial"){
+        // vacío hasta que el usuario elija mes
+      }
+
+      if (vista === "Auditoria"){
+        cargarAuditoria();
+      }
+
+    })
+    .withFailureHandler(function(err){
+      mostrarError(err.message);
+    })
+    .obtenerVista(vista);
+}
+
+/*************************************************
+ DASHBOARD
+*************************************************/
+
+function cargarDashboard(){
+
+  google.script.run
+    .withSuccessHandler(function(data){
+
+      if(!data || !data.fechaHora) return;
+
+      // Fecha
+      
+      const fechaEl = document.getElementById("fechaHoraSistema");
+
+      if (fechaEl && data.fechaHora){
+        fechaEl.innerText =
+          data.fechaHora.fecha + " | " + data.fechaHora.hora;
+      }
+
+      // Mes en curso
+      if (data.resumen){
+
+      const mesEl = document.getElementById("mesActual");
+
+      if (mesEl && data.resumen.mesActual){
+        mesEl.innerText =
+        data.resumen.mesActual.toUpperCase();
+        }
+      }
+
+      // Resumen
+      if (data.resumen){
+
+        const ingresosEl = document.getElementById("totalIngresos");
+        const egresosEl = document.getElementById("totalEgresos");
+        const saldoEl = document.getElementById("saldoFinal");
+
+        if (ingresosEl)
+          ingresosEl.innerText =
+            "$" + Number(data.resumen.ingresos || 0).toFixed(2);
+
+        if (egresosEl)
+          egresosEl.innerText =
+            "$" + Number(data.resumen.egresos || 0).toFixed(2);
+
+        if (saldoEl)
+          saldoEl.innerText =
+            "$" + Number(data.resumen.saldo || 0).toFixed(2);
+      }
+
+      // Estado
+      if (data.estado){
+
+        const badge = document.getElementById("estadoMes");
+        if (!badge) return;
+
+        badge.innerText = data.estado.estado;
+
+        badge.classList.remove("badge-abierto","badge-cerrado");
+
+        if (data.estado.estado === "CERRADO"){
+          badge.classList.add("badge-cerrado");
+        } else {
+          badge.classList.add("badge-abierto");
+        }
+      }
+
+    })
+    .withFailureHandler(function(err){
+      mostrarError(err.message);
+    })
+    .obtenerDashboardCompleto();
+}
+
+/*************************************************
+ REGISTRO
+*************************************************/
+
+function confirmarRegistro(){
+  accionPendiente = "enviarRegistro";
+  document.getElementById("modalConfirmacion").style.display = "flex";
+}
+
+function confirmarAccion(){
+
+  document.getElementById("modalConfirmacion").style.display = "none";
+
+  if (accionPendiente === "enviarRegistro"){
+    enviarRegistro();
+  }
+
+  accionPendiente = null;
+}
+
+function enviarRegistro(){
+
+  const datos = {
+    mes: document.getElementById("mes").value,
+    tipo: document.getElementById("tipo").value,
+    categoria: document.getElementById("categoria").value,
+    miembro: document.getElementById("miembro").value,
+    monto: document.getElementById("monto").value,
+    metodo: document.getElementById("metodo").value,
+    referencia: document.getElementById("referencia").value
+  };
+
+  const btn = document.getElementById("btnGuardarMovimiento");
+  if(btn){
+    btn.disabled = true;
+  }
+
+  google.script.run
+
+    .withSuccessHandler(function(response){
+
+      mostrarExito(
+        "Movimiento registrado correctamente.\nID: " + response.id
+      );
+
+      const form = document.getElementById("formRegistro");
+      if(form){
+        form.reset();
+      }
+
+      // actualizar dashboard inmediatamente
+      if(typeof cargarDashboard === "function"){
+        cargarDashboard();
+      }
+
+    })
+
+    .withFailureHandler(function(error){
+
+      // reactivar botón si hubo error
+      if(btn){
+        btn.disabled = false;
+      }
+
+      if(
+        error.message &&
+        (
+          error.message.includes("MES_CERRADO") ||
+          error.message.includes("MES_NO_PERMITIDO")
+        )
+      ){
+        mostrarModalAutorizacionMesCerrado();
+        console.log("Solicitando autorización para mes cerrado");
+      }
+      else{
+        mostrarError(error.message);
+      }
+
+    })
+
+    .registrarMovimiento(datos);
+
+}
+
+/*************************************************
+ VALIDAR FORMULARIO
+*************************************************/
+
+function validarFormulario(formId){
+
+  const form = document.getElementById(formId);
+  let valido = true;
+
+  form.querySelectorAll("input[required], select[required]").forEach(campo => {
+
+    campo.classList.remove("input-error");
+
+    if (!campo.value.trim()){
+      campo.classList.add("input-error");
+      valido = false;
+    }
+  });
+
+  return valido;
+}
+
+/*************************************************
+ FECHA Y HORA
+*************************************************/
+
+function cargarFechaHoraServidor(){
+
+  google.script.run
+    .withSuccessHandler(function(data){
+      const el = document.getElementById("fechaHoraServidor");
+      if (!el) return;
+      el.innerText = data.fechaHora.fecha + "     HORA:  " + data.hora;
+    })
+    .obtenerFechaHoraServidor();
+}
+
+function cargarFechaHoraRegistro(){
+
+  google.script.run
+    .withSuccessHandler(function(data){
+
+      const el = document.getElementById("fechaHoraRegistro");
+      if (!el) return;
+
+      el.innerText = data.fecha + "     HORA: " + data.hora;
+
+    })
+    .obtenerFechaHoraServidor();
+}
+
+function cargarListaMiembros(){
+
+  google.script.run
+    .withSuccessHandler(function(lista){
+
+      const select = document.getElementById("miembro");
+      if (!select) return;
+
+      // Limpiar opciones previas
+      select.innerHTML = '<option value="">Seleccione miembro</option>';
+
+      if (!Array.isArray(lista)) return;
+
+      lista.forEach(function(nombre){
+        const option = document.createElement("option");
+        option.value = nombre;
+        option.textContent = nombre;
+        select.appendChild(option);
+      });
+
+    })
+    .withFailureHandler(function(err){
+      console.error("Error cargando miembros:", err.message);
+    })
+    .obtenerListaMiembros();
+}
+
+/*************************************************
+ AUTORIZACIÓN
+*************************************************/
+
+function mostrarModalAutorizacionMesCerrado(){
+
+  console.log("Modal abierto, solicitando QR...")
+
+  const modal = document.getElementById("modalMesCerrado");
+  modal.style.display = "flex";
+
+  // Ocultar mensaje de error previo
+  const errorEl = document.getElementById("errorMesCerrado");
+  if (errorEl){
+    errorEl.style.display = "none";
+    errorEl.innerText = "";
+  }
+
+  // Cargar QR dinámicamente
+  google.script.run
+  .withSuccessHandler(function(response){
+
+    const img = document.getElementById("qr2fa");
+    if (!img) return;
+
+    if (!response || !response.mostrarQR) {
+      img.style.display = "none";
+      return;
+    }
+
+    img.src = response.qr;
+    img.style.display = "block";
+
+  })
+  .withFailureHandler(function(err){
+    mostrarError(err.message);
+  })
+  .generarQR2FA();
+}
+/*************************************************
+ AUDITORIA
+*************************************************/
+
+function cargarAuditoria(){
+
+  google.script.run
+    .withSuccessHandler(function(data){
+
+      let html = "<table class='tabla-auditoria'>";
+      data.forEach(function(fila, i){
+        if (i === 0) return;
+        html += "<tr>";
+        fila.forEach(celda => html += "<td>" + celda + "</td>");
+        html += "</tr>";
+      });
+      html += "</table>";
+
+      document.getElementById("tablaAuditoria").innerHTML = html;
+
+    })
+    .withFailureHandler(function(err){
+      mostrarError(err.message);
+    })
+    .obtenerBitacora();
+}
+
+/*************************************************
+ INACTIVIDAD
+*************************************************/
+
+function iniciarControlInactividad(){
+
+  function reset(){
+    clearTimeout(tiempoInactividad);
+    tiempoInactividad = setTimeout(cerrarSesionPorInactividad, LIMITE_INACTIVIDAD);
+  }
+
+  window.onload = reset;
+  document.onmousemove = reset;
+  document.onkeypress = reset;
+  document.onclick = reset;
+}
+
+function cerrarSesionPorInactividad(){
+  mostrarError("Sesión cerrada por inactividad.");
+  setTimeout(() => location.reload(), 3000);
+}
+
+/*************************************************
+ UTILIDAD
+*************************************************/
+
+function capitalizar(texto){
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+/*************************************************
+ SESIÓN
+*************************************************/
+
+function inicializarSesion(){
+
+  google.script.run
+    .withSuccessHandler(function(user){
+
+      if (!user) return;
+
+      const el = document.getElementById("correoActivo");
+      if (el){
+        el.innerText =
+          "Usuario: " + user.email + " (" + user.rol + ")";
+      }
+
+      if (typeof aplicarPermisos === "function"){
+        aplicarPermisos(user.rol);
+      }
+
+    })
+    .obtenerUsuarioActual();
+}
+
+function cerrarSesion(){
+
+  mostrarExito("Sesión cerrada correctamente.");
+
+  setTimeout(function(){
+    location.reload();
+  }, 1000);
+}
+
+/*************************************************
+ APLICACION DE PERMISOS
+*************************************************/
+
+function aplicarPermisos(rol){
+
+  if (rol === "CONSULTA"){
+    ocultarElemento("btnRegistrar");
+    ocultarElemento("btnConciliacion");
+    ocultarElemento("btnControl");
+    ocultarElemento("btnAuditoria");
+  }
+
+}
+
+function ocultarElemento(id){
+  const el = document.getElementById(id);
+  if (el) el.style.display = "none";
+}
+
+/*************************************************
+ REAPERTURA MES CON 2FA
+*************************************************/
+
+function cerrarModalMesCerrado(){
+  const modal = document.getElementById("modalMesCerrado");
+  if (modal) modal.style.display = "none";
+}
+
+function autorizarReaperturaMes(){
+
+  const user = document.getElementById("adminUserMes").value;
+  const pass = document.getElementById("adminPassMes").value;
+  const codigo = document.getElementById("codigo2faMes").value;
+  const mes = document.getElementById("mes").value;
+
+  google.script.run
+    .withSuccessHandler(function(){
+
+      cerrarModalMesCerrado();
+      mostrarExito("Mes reabierto correctamente.");
+
+    })
+    .withFailureHandler(function(error){
+
+  console.error("Error servidor:", error);
+
+  const errorEl = document.getElementById("errorMesCerrado");
+
+  if (errorEl){
+    errorEl.style.display = "block";
+
+    if(error && error.message){
+      errorEl.innerText = error.message;
+    }else{
+      errorEl.innerText = "Error de autenticación.";
+    }
+  }
+
+})
+    .autorizarReapertura(mes, user, pass, codigo);
+
+}
+
+/*****************************
+CIERRE DE MODAL
+*****************************/
+
+function cerrarModalExito(){
+  const modal = document.getElementById("modalExito");
+  if(modal){
+    modal.style.display = "none";
+  }
+}
+
+/*************************************************
+CERRAR EL MES REABIERTO
+*************************************************/
+
+function cerrarMesActual(){
+
+  const mes = document.getElementById("mes").value;
+
+  google.script.run
+    .withSuccessHandler(function(){
+
+      mostrarExito("Mes cerrado nuevamente.");
+
+      cargarDashboard();
+
+    })
+    .withFailureHandler(function(error){
+
+      mostrarError(error.message);
+
+    })
+    .cerrarMes(mes);
+
+}
+</script>

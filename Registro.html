@@ -1,0 +1,110 @@
+<div class="registro-wrapper">
+
+  <div class="registro-card">
+
+    <h2 class="registro-titulo">
+      Registro de Movimiento
+    </h2>
+
+    <div class="registro-fecha">
+      <p id="fechaHoraRegistro"></p>
+    </div>
+
+    <form id="formRegistro" class="registro-form">
+
+  <div class="form-grid">
+
+    <!-- Columna 1 -->
+    <div class="form-group">
+      <label>Mes</label>
+      <select id="mes">
+        <option value="">Seleccione</option>
+        <option value="enero">Enero</option>
+        <option value="febrero">Febrero</option>
+        <option value="marzo">Marzo</option>
+        <option value="abril">Abril</option>
+        <option value="mayo">Mayo</option>
+        <option value="junio">Junio</option>
+        <option value="julio">Julio</option>
+        <option value="agosto">Agosto</option>
+        <option value="septiembre">Septiembre</option>
+        <option value="octubre">Octubre</option>
+        <option value="noviembre">Noviembre</option>
+        <option value="diciembre">Diciembre</option>
+      </select>
+    </div>
+
+    <!-- Columna 2 -->
+    <div class="form-group">
+      <label>Tipo de Registro</label>
+      <select id="tipo" required>
+        <option value="">Seleccione</option>
+        <option value="ingreso">Ingreso</option>
+        <option value="egreso">Egreso</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Categoría</label>
+      <input type="text" id="categoria" required>
+    </div>
+
+    <div class="form-group">
+      <label>Miembro</label>
+      <select id="miembro" class="form-control">
+        <option value="">Seleccione miembro</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Monto (MXN)</label>
+      <input type="text" id="monto" required>
+    </div>
+
+    <div class="form-group">
+      <label>Método de Pago</label>
+      <select id="metodo" required>
+        <option value="">Seleccione</option>
+        <option value="Efectivo">Efectivo</option>
+        <option value="Transferencia">Transferencia</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Referencia No.</label>
+      <input type="text" id="referencia">
+    </div>
+
+  </div>
+
+  <!-- Botón fuera del grid -->
+  <div class="form-actions">
+    <button type="button" class="primary"
+  onclick="confirmarRegistro()">
+  Guardar Movimiento
+</button>
+  </div>
+
+</form>
+
+  </div>
+
+</div>
+
+<script>
+  cargarFechaHoraRegistro();
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+  inicializarSesion();
+  iniciarControlInactividad();
+});
+</script>
+
+<div id="contenedorQR"></div>
+
+<!-- Botón para cerrar mes reabiertp -->
+<button id="btnGuardarMovimiento" onclick="confirmarRegistro()">
+Guardar Movimiento
+</button>

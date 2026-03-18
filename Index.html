@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <?!= incluir("Styles"); ?>
+</head>
+
+<body>
+
+<!-- ===============================
+     HEADER
+================================ -->
+<header class="app-header">
+  
+  <div class="header-left">
+    <img 
+      src="https://raw.githubusercontent.com/OPacPower22/images/main/logo-fraternidad-estilizado2.png"
+      class="logo"
+    >
+  </div>
+
+  <div class="header-center">
+    Tesorería de Fraternidad No. 1
+  </div>
+
+  <div class="header-right">
+    <div class="header-info">
+      <span class="ejercicio">
+        Ejercicio 2026 E.·.V.·.
+      </span>
+      <span id="correoActivo" class="usuario-info"></span>
+    </div>
+    <button class="btn-logout" onclick="cerrarSesion()">
+      Cerrar Sesión
+    </button>
+  </div>
+  
+</header>
+
+
+<!-- ===============================
+     LAYOUT PRINCIPAL
+================================ -->
+<div class="layout">
+
+  <?!= incluir("Sidebar"); ?>
+
+  <main id="contenido-dinamico">
+    <h2 style="text-align:center;">
+      Bienvenido al Sistema de Tesorería
+    </h2>
+  </main>
+
+</div>
+
+<script>
+  window.onload = function(){
+    inicializarSesion();
+    iniciarControlInactividad();
+    cargarVista("Dashboard");
+  };
+</script>
+
+<?!= incluir("Modales"); ?>
+<?!= incluir("Scripts"); ?>
+
+</body>
+</html>

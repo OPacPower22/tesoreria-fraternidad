@@ -1,0 +1,94 @@
+<!-- MODAL CONFIRMACIÓN -->
+<div id="modalConfirmacion" class="modal">
+  <div class="modal-content">
+    <h3>Confirmar Operación</h3>
+    <p id="mensajeConfirmacion"></p>
+    <div style="display:flex; gap:10px; justify-content:center;">
+      <button class="primary" onclick="confirmarAccion()">Confirmar</button>
+      <button class="secondary" onclick="cerrarModalGlobal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ERROR -->
+<div id="modalError" class="modal">
+  <div class="modal-content modal-error">
+    <h3>Error del Sistema</h3>
+    <p id="mensajeError"></p>
+    <button onclick="cerrarModalError()">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL ÉXITO -->
+<div id="modalExito" class="modal">
+  <div class="modal-content modal-exito">
+    <h3>Operación Confirmada</h3>
+    <p id="mensajeExito"></p>
+    <button onclick="cerrarModalExito()">Aceptar</button>
+  </div>
+</div>
+
+<!-- MODAL AUTORIZACIÓN -->
+<div id="modalAutorizacion" class="modal">
+  <div class="modal-content">
+    <h3>Mes Cerrado</h3>
+    <p>Este mes está cerrado. Se requiere autorización de administrador.</p>
+
+    <label>Usuario</label>
+    <input type="text" id="authUser">
+
+    <label>Contraseña</label>
+    <input type="password" id="authPass">
+
+    <button onclick="autorizarReapertura()">Autorizar</button>
+    <button onclick="cerrarModalAutorizacion()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL MES CERRADO -->
+<div id="modalMesCerrado" class="modal">
+  <div class="modal-content">
+
+    <h3>Mes Cerrado</h3>
+
+    <p>
+      El mes seleccionado está cerrado.
+      Para modificarlo debe reabrirse con credenciales de Administrador.
+    </p>
+
+    <label>Usuario Admin</label>
+    <input type="text" id="adminUserMes">
+
+    <label>Contraseña</label>
+    <input type="password" id="adminPassMes">
+
+    <p id="errorMesCerrado" style="color:red; display:none; margin-top:10px;"></p>
+
+    <label>Código 2FA</label>
+    <input type="text" id="codigo2faMes">
+    <p style="font-size:12px; margin-top:10px;">
+      Escanee este código con una aplicación de autenticación
+      como Google Authenticator o Microsoft Authenticator.
+      Luego ingrese el código de 6 dígitos generado.
+    </p>
+
+    <div style="text-align:center; margin-top:15px;">
+      <img id="qr2fa" style="display:none; max-width:100px;">
+    </div>
+
+    <div style="margin-top:15px; display:flex; gap:10px; justify-content:center;">
+      <button class="primary" onclick="autorizarReaperturaMes()">
+        Autorizar
+      </button>
+      <button class="secondary" onclick="cerrarModalMesCerrado()">
+        Cancelar
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL CERRAR MES REABIERTO -->
+<button onclick="cerrarMesActual()" class="btn-rojo">
+Cerrar Mes
+</button>
